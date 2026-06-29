@@ -448,7 +448,7 @@ async function sendOtp(){
   if(!email||!email.includes('@')){ err.textContent='Ingresá un email válido'; return; }
   const btn = document.getElementById('aSendBtn');
   btn.disabled=true; btn.textContent='Enviando…'; err.textContent='';
-  const { error } = await _sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:true } });
+  const { error } = await _sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:true, emailRedirectTo:'https://ricardoramosdev.github.io/fittrack/' } });
   btn.disabled=false; btn.textContent='Continuar →';
   if(error){ err.textContent='No se pudo enviar. Revisá el email.'; return; }
   _otpEmail = email;
