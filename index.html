@@ -448,11 +448,17 @@ async function sendOtp(){
   if(!email||!email.includes('@')){ err.textContent='Ingresá un email válido'; return; }
   const btn = document.getElementById('aSendBtn');
   btn.disabled=true; btn.textContent='Enviando…'; err.textContent='';
-  const { error } = await _sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:true, emailRedirectTo:'https://ricardoramosdev.github.io/fittrack/' } });
+  const { error } = await _sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:true } });
   btn.disabled=false; btn.textContent='Continuar →';
-  if(error){ err.textContent='No se pudo enviar. Revisá el email.'; return; }
+  if(error){
+    if(error.status===429||String(error.message).toLowerCase().includes('rate'))
+      err.textContent='Demasiados intentos. Esperá unos minutos.';
+    else
+      err.textContent='Error: '+(error.message||'No se pudo enviar. Intentá de nuevo.');
+    return;
+  }
   _otpEmail = email;
-  document.getElementById('aOtpSub').textContent = `Código enviado a ${email}`;
+  document.getElementById('aOtpSub').textContent = `Código enviado a ${email} — ingresá los 6 dígitos (ignorá el link del email)`;
   document.getElementById('aStep1').style.display='none';
   document.getElementById('aStep2').style.display='block';
   setTimeout(()=>document.getElementById('aOtp').focus(), 100);
