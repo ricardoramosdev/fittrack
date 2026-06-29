@@ -303,6 +303,16 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     </div>
   </div>
 
+
+  <!-- DIAG (solo para desarrollo) -->
+  <section class="screen" id="screen-diag" style="padding-bottom:120px">
+    <div class="eyebrow">Diagnóstico</div>
+    <div style="background:var(--ink-2);border:1px solid var(--line);border-radius:13px;padding:16px">
+      <button class="addset" onclick="adminSetup()" style="margin-bottom:12px">🔧 Verificar y reparar tablas</button>
+      <pre id="diagLog" style="font-family:'JetBrains Mono';font-size:11px;color:var(--mute);white-space:pre-wrap;margin:0;line-height:1.6">Presioná el botón para diagnosticar...</pre>
+    </div>
+  </section>
+
   <!-- NAV -->
   <nav class="nav">
     <button class="on" data-s="log" onclick="go('log')">
@@ -313,7 +323,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Historial</button>
     <button data-s="prog" onclick="go('prog')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5M4 19h16M8 16l4-5 3 3 4-6"/></svg>Progreso</button>
-  </nav>
+    <button data-s="diag" onclick="go('diag')" title="Diagnóstico">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 6v4m0 4h.01"/></svg>
+      Diag</button>
+</nav>
 </div>
 
 <!-- Picker sheet -->
@@ -615,7 +628,7 @@ async function finishExercise(){
   const {data, error} = await _sb.from('workout_sessions').insert({
     user_id:_userId, ex_id:ex.id, ex_name:ex.name, musc:ex.musc, t:ex.t, sets, notes, date
   }).select().single();
-  if(error){ toast('Error: '+error.message); console.error(error); return; }
+  if(error){ toast('Error: '+error.message); console.error('SUPA ERROR',JSON.stringify(error)); return; }
   state.sessions.unshift({id:data.id, date, exId:ex.id, exName:ex.name, musc:ex.musc, t:ex.t, sets, notes});
   state.draftSets=[]; document.getElementById('inNotes').value='';
   renderLog();
@@ -919,6 +932,111 @@ async function saveEdit(){
   renderHist();
   if(state.curEx && state.curEx.id===state.sessions[idx].exId) renderLog();
   toast('Cambios guardados ✓');
+}
+
+
+/* ===================== ADMIN (service role, solo diagnóstico) ===================== */
+const _SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmeWV3Y3Jjc3VobXZkamxkbXNuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Mjc2MTQ3NiwiZXhwIjoyMDk4MzM3NDc2fQ.uU94sa53JVR4pQvO_EgDgpOyilqkLZT1htGNfr0N4M0';
+async function runSQL(sql){
+  const res = await fetch('https://efyewcrcsuhmvdjldmsn.supabase.co/rest/v1/rpc/exec_sql', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+_SERVICE_KEY,'apikey':_SERVICE_KEY},
+    body: JSON.stringify({query: sql})
+  });
+  return res;
+}
+
+async function adminSetup(){
+  const log = document.getElementById('diagLog');
+  log.textContent = 'Ejecutando...';
+
+  // Usar el endpoint de query directo de Supabase
+  const sql = `
+    -- Recrear tablas con estructura correcta
+    drop table if exists workout_sessions cascade;
+    drop table if exists exercises_custom cascade;
+
+    create table workout_sessions (
+      id uuid default gen_random_uuid() primary key,
+      user_id uuid references auth.users(id) on delete cascade not null,
+      ex_id text not null,
+      ex_name text not null,
+      musc text not null,
+      t text not null,
+      sets jsonb not null default '[]'::jsonb,
+      notes text default '',
+      date date not null default current_date,
+      created_at timestamptz default now()
+    );
+
+    create table exercises_custom (
+      id uuid default gen_random_uuid() primary key,
+      user_id uuid references auth.users(id) on delete cascade not null,
+      name text not null,
+      musc text not null,
+      t text not null,
+      created_at timestamptz default now()
+    );
+
+    alter table workout_sessions enable row level security;
+    alter table exercises_custom enable row level security;
+
+    drop policy if exists "own sessions" on workout_sessions;
+    drop policy if exists "own exercises" on exercises_custom;
+
+    create policy "own sessions" on workout_sessions
+      for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+    create policy "own exercises" on exercises_custom
+      for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  `;
+
+  try {
+    // Probar insert directo para detectar el error real
+    const { data:{user} } = await _sb.auth.getUser();
+    log.textContent += '\nUsuario: ' + (user?.id || 'NO AUTH');
+
+    // Test insert con service role bypass
+    const testRes = await fetch('https://efyewcrcsuhmvdjldmsn.supabase.co/rest/v1/workout_sessions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmeWV3Y3Jjc3VobXZkamxkbXNuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Mjc2MTQ3NiwiZXhwIjoyMDk4MzM3NDc2fQ.uU94sa53JVR4pQvO_EgDgpOyilqkLZT1htGNfr0N4M0',
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmeWV3Y3Jjc3VobXZkamxkbXNuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Mjc2MTQ3NiwiZXhwIjoyMDk4MzM3NDc2fQ.uU94sa53JVR4pQvO_EgDgpOyilqkLZT1htGNfr0N4M0',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({
+        user_id: user?.id || '00000000-0000-0000-0000-000000000000',
+        ex_id: 'test', ex_name: 'Test', musc: 'Test', t: 'peso',
+        sets: JSON.stringify([{reps:5,weight:10}]),
+        notes: '', date: new Date().toISOString().slice(0,10)
+      })
+    });
+    const testBody = await testRes.text();
+    log.textContent += '\nTest insert status: ' + testRes.status;
+    log.textContent += '\nRespuesta: ' + testBody.slice(0,300);
+
+    if(testRes.status===201) {
+      log.textContent += '\n\n✅ TABLAS OK - el problema es otro';
+      // Limpiar registro de test
+      const parsed = JSON.parse(testBody);
+      const testId = Array.isArray(parsed) ? parsed[0]?.id : parsed?.id;
+      if(testId) {
+        await fetch(`https://efyewcrcsuhmvdjldmsn.supabase.co/rest/v1/workout_sessions?id=eq.${testId}`, {
+          method:'DELETE', headers:{'Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmeWV3Y3Jjc3VobXZkamxkbXNuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Mjc2MTQ3NiwiZXhwIjoyMDk4MzM3NDc2fQ.uU94sa53JVR4pQvO_EgDgpOyilqkLZT1htGNfr0N4M0','apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmeWV3Y3Jjc3VobXZkamxkbXNuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Mjc2MTQ3NiwiZXhwIjoyMDk4MzM3NDc2fQ.uU94sa53JVR4pQvO_EgDgpOyilqkLZT1htGNfr0N4M0'}
+        });
+        log.textContent += '\n(registro de test eliminado)';
+      }
+    } else if(testRes.status===404 || testBody.includes('does not exist')) {
+      log.textContent += '\n\n❌ TABLAS NO EXISTEN - necesitás crear las tablas';
+    } else if(testRes.status===401) {
+      log.textContent += '\n\n❌ ERROR DE AUTH';
+    } else {
+      log.textContent += '\n\nVerificá el error arriba';
+    }
+  } catch(e) {
+    log.textContent += '\nError JS: ' + e.message;
+  }
 }
 
 /* ===================== INIT ===================== */
