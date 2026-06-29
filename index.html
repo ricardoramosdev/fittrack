@@ -402,6 +402,7 @@ let state = {
 
 /* ===================== SUPABASE + AUTH ===================== */
 let _sb = null;
+let _userId = null;
 let _otpEmail = '';
 
 function initSb(){
@@ -420,6 +421,7 @@ async function initAuth(){
 }
 
 async function onSignedIn(user){
+  _userId = user.id;
   hideAuth();
   const email = user.email || '';
   document.getElementById('uChip').style.display = 'flex';
@@ -430,6 +432,7 @@ async function onSignedIn(user){
 }
 
 function onSignedOut(){
+  _userId = null;
   state.sessions=[]; state.custom=[]; state.curEx=null; state.draftSets=[];
   document.getElementById('uChip').style.display='none';
   showAuth();
@@ -608,10 +611,11 @@ async function finishExercise(){
   const notes = document.getElementById('inNotes').value.trim();
   const sets  = state.draftSets.slice();
   const date  = todayStr();
+  if(!_userId){ toast('Sesión expirada, ingresá de nuevo'); return; }
   const {data, error} = await _sb.from('workout_sessions').insert({
-    ex_id:ex.id, ex_name:ex.name, musc:ex.musc, t:ex.t, sets, notes, date
+    user_id:_userId, ex_id:ex.id, ex_name:ex.name, musc:ex.musc, t:ex.t, sets, notes, date
   }).select().single();
-  if(error){ toast('Error al guardar'); console.error(error); return; }
+  if(error){ toast('Error: '+error.message); console.error(error); return; }
   state.sessions.unshift({id:data.id, date, exId:ex.id, exName:ex.name, musc:ex.musc, t:ex.t, sets, notes});
   state.draftSets=[]; document.getElementById('inNotes').value='';
   renderLog();
@@ -670,8 +674,9 @@ async function saveCustom(){
   if(!name){ toast('Ponele un nombre'); return; }
   const musc=document.getElementById('cMusc').value;
   const t=document.querySelector('#cType button.on').dataset.t;
-  const {data, error} = await _sb.from('exercises_custom').insert({name, musc, t}).select().single();
-  if(error){ toast('Error al crear ejercicio'); return; }
+  if(!_userId){ toast('Sesión expirada, ingresá de nuevo'); return; }
+  const {data, error} = await _sb.from('exercises_custom').insert({user_id:_userId, name, musc, t}).select().single();
+  if(error){ toast('Error: '+error.message); return; }
   state.custom.push({id:data.id, name, musc, t});
   closeSheet(); renderLib(); toast('Ejercicio creado ✓');
 }
@@ -849,7 +854,7 @@ function confirmDel(id){
 
 async function deleteSession(id){
   const {error} = await _sb.from('workout_sessions').delete().eq('id', id);
-  if(error){ toast('Error al eliminar'); return; }
+  if(error){ toast('Error: '+error.message); return; }
   state.sessions = state.sessions.filter(s=>s.id!==id);
   renderHist();
   toast('Registro eliminado');
@@ -907,7 +912,7 @@ async function saveEdit(){
   if(!validSets.length){ toast('Necesitás al menos 1 serie válida'); return; }
   const notes = document.getElementById('editNotes').value.trim();
   const {error} = await _sb.from('workout_sessions').update({sets:validSets, notes}).eq('id', editId);
-  if(error){ toast('Error al guardar'); return; }
+  if(error){ toast('Error: '+error.message); return; }
   state.sessions[idx].sets = validSets;
   state.sessions[idx].notes = notes;
   closeSheet();
