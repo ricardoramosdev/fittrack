@@ -288,21 +288,17 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <div id="aStep1">
         <div class="auth-brand">FIT<b>TRACK</b></div>
         <div class="auth-sub">Tu progreso,<br>siempre con vos</div>
-        <label class="auth-lbl">Tu email</label>
-        <input class="auth-inp" id="aEmail" type="email" inputmode="email" placeholder="nombre@email.com" onkeydown="if(event.key==='Enter')sendOtp()">
-        <button class="auth-btn" id="aSendBtn" onclick="sendOtp()">Continuar →</button>
+        <label class="auth-lbl">Email</label>
+        <input class="auth-inp" id="aEmail" type="email" inputmode="email" placeholder="nombre@email.com"
+          onkeydown="if(event.key==='Enter')doSignIn()">
+        <label class="auth-lbl">Contraseña</label>
+        <input class="auth-inp" id="aPass" type="password" placeholder="Mínimo 6 caracteres"
+          onkeydown="if(event.key==='Enter')doSignIn()">
+        <div style="display:flex;gap:10px">
+          <button class="auth-btn" id="aSignInBtn" style="flex:1" onclick="doSignIn()">Ingresar</button>
+          <button class="auth-btn" id="aSignUpBtn" style="flex:1;background:var(--ink-3);color:var(--chalk);border:1px solid var(--line)" onclick="doSignUp()">Crear cuenta</button>
+        </div>
         <div class="auth-err" id="aErr1"></div>
-      </div>
-      <div id="aStep2" style="display:none">
-        <div class="auth-brand">FIT<b>TRACK</b></div>
-        <div class="auth-sub" id="aOtpSub">Revisá tu email</div>
-        <label class="auth-lbl">Código de 6 dígitos</label>
-        <input class="auth-inp otp" id="aOtp" type="text" inputmode="numeric" placeholder="······" maxlength="6"
-          onkeydown="if(event.key==='Enter')verifyOtp()"
-          oninput="if(this.value.replace(/\D/g,'').length===6){this.value=this.value.replace(/\D/g,'');verifyOtp()}">
-        <button class="auth-btn" id="aVerifyBtn" onclick="verifyOtp()">Ingresar</button>
-        <button class="auth-back" onclick="backToEmail()">← Cambiar email</button>
-        <div class="auth-err" id="aErr2"></div>
       </div>
     </div>
   </div>
@@ -442,44 +438,36 @@ function onSignedOut(){
 function showAuth(){ document.getElementById('authOv').classList.remove('hidden'); }
 function hideAuth(){ document.getElementById('authOv').classList.add('hidden'); }
 
-async function sendOtp(){
+async function doSignIn(){
   const email = document.getElementById('aEmail').value.trim();
-  const err = document.getElementById('aErr1');
-  if(!email||!email.includes('@')){ err.textContent='Ingresá un email válido'; return; }
-  const btn = document.getElementById('aSendBtn');
-  btn.disabled=true; btn.textContent='Enviando…'; err.textContent='';
-  const { error } = await _sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:true } });
-  btn.disabled=false; btn.textContent='Continuar →';
-  if(error){
-    if(error.status===429||String(error.message).toLowerCase().includes('rate'))
-      err.textContent='Demasiados intentos. Esperá unos minutos.';
-    else
-      err.textContent='Error: '+(error.message||'No se pudo enviar. Intentá de nuevo.');
-    return;
-  }
-  _otpEmail = email;
-  document.getElementById('aOtpSub').textContent = `Código enviado a ${email} — ingresá los 6 dígitos (ignorá el link del email)`;
-  document.getElementById('aStep1').style.display='none';
-  document.getElementById('aStep2').style.display='block';
-  setTimeout(()=>document.getElementById('aOtp').focus(), 100);
-}
-
-async function verifyOtp(){
-  const token = document.getElementById('aOtp').value.replace(/\D/g,'');
-  const err = document.getElementById('aErr2');
-  if(token.length!==6){ err.textContent='El código tiene 6 dígitos'; return; }
-  const btn = document.getElementById('aVerifyBtn');
-  btn.disabled=true; btn.textContent='Verificando…'; err.textContent='';
-  const { error } = await _sb.auth.verifyOtp({ email:_otpEmail, token, type:'email' });
+  const pass  = document.getElementById('aPass').value;
+  const err   = document.getElementById('aErr1');
+  err.textContent=''; err.style.color='#e74c3c';
+  if(!email||!pass){ err.textContent='Completá email y contraseña'; return; }
+  const btn = document.getElementById('aSignInBtn');
+  btn.disabled=true; btn.textContent='Ingresando…';
+  const { error } = await _sb.auth.signInWithPassword({ email, password:pass });
   btn.disabled=false; btn.textContent='Ingresar';
-  if(error){ err.textContent='Código incorrecto o expirado.'; document.getElementById('aOtp').value=''; return; }
+  if(error){
+    if(error.message?.includes('Invalid login')) err.textContent='Email o contraseña incorrectos';
+    else err.textContent = error.message||'No se pudo ingresar';
+  }
 }
 
-function backToEmail(){
-  document.getElementById('aStep2').style.display='none';
-  document.getElementById('aStep1').style.display='block';
-  document.getElementById('aErr2').textContent='';
-  document.getElementById('aOtp').value='';
+async function doSignUp(){
+  const email = document.getElementById('aEmail').value.trim();
+  const pass  = document.getElementById('aPass').value;
+  const err   = document.getElementById('aErr1');
+  err.textContent=''; err.style.color='#e74c3c';
+  if(!email||!pass){ err.textContent='Completá email y contraseña'; return; }
+  if(pass.length<6){ err.textContent='La contraseña necesita al menos 6 caracteres'; return; }
+  const btn = document.getElementById('aSignUpBtn');
+  btn.disabled=true; btn.textContent='Creando…';
+  const { error } = await _sb.auth.signUp({ email, password:pass });
+  btn.disabled=false; btn.textContent='Crear cuenta';
+  if(error){ err.textContent = error.message||'No se pudo crear la cuenta'; return; }
+  err.style.color='var(--good)';
+  err.textContent='¡Cuenta creada! Ingresando…';
 }
 
 async function signOut(){
