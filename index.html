@@ -182,13 +182,36 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .erow .sep{color:var(--mute-2);font-size:12px}
 .erow .edel{color:#e74c3c;font-size:20px;padding:4px;margin-left:auto;flex-shrink:0}
 .eadd{width:100%;background:var(--ink-3);border:1px solid var(--line);color:var(--mute);font-weight:600;font-size:13px;padding:11px;border-radius:11px;margin-bottom:12px}
+
+/* ── Auth overlay ── */
+.auth-ov{position:fixed;inset:0;background:var(--ink);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px}
+.auth-ov.hidden{display:none}
+.auth-box{width:100%;max-width:360px}
+.auth-brand{font-family:'Bebas Neue';font-size:44px;letter-spacing:3px;text-align:center;margin-bottom:6px}
+.auth-brand b{color:var(--heat)}
+.auth-sub{text-align:center;color:var(--mute);font-size:14px;margin-bottom:38px;line-height:1.5}
+.auth-lbl{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mute);font-weight:600;margin-bottom:8px;display:block}
+.auth-inp{width:100%;background:var(--ink-2);border:1px solid var(--line);border-radius:14px;color:var(--chalk);padding:16px;font-size:17px;outline:none;font-family:inherit;margin-bottom:14px;transition:border-color .2s}
+.auth-inp:focus{border-color:var(--heat)}
+.auth-inp.otp{letter-spacing:10px;font-family:'JetBrains Mono';font-size:26px;text-align:center}
+.auth-btn{width:100%;background:var(--heat);color:#101010;font-weight:700;font-size:16px;padding:16px;border-radius:14px;border:none;cursor:pointer;font-family:inherit;transition:opacity .15s}
+.auth-btn:disabled{opacity:.45;cursor:default}
+.auth-back{width:100%;background:none;border:none;color:var(--mute);font-size:13px;padding:14px;cursor:pointer;font-family:inherit;margin-top:2px}
+.auth-err{color:#e74c3c;font-size:13px;text-align:center;margin-top:10px;min-height:18px}
+/* user chip */
+.uchip{display:flex;align-items:center;gap:6px;background:var(--ink-2);border:1px solid var(--line);border-radius:20px;padding:5px 11px 5px 7px;cursor:pointer}
+.uchip .av{width:22px;height:22px;border-radius:50%;background:var(--heat);color:#101010;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.uchip .em{font-size:11px;color:var(--mute);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="app">
   <div class="topbar">
     <div class="brand">FIT<b>TRACK</b></div>
     <div class="date" id="todayLabel"></div>
+    <div class="uchip" id="uChip" style="display:none" onclick="signOut()"><div class="av" id="uAv">?</div><div class="em" id="uEm"></div></div>
   </div>
 
   <!-- LOG -->
@@ -257,6 +280,32 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     <select class="progsel" id="progSel" onchange="renderProg()"></select>
     <div id="progBody"></div>
   </section>
+
+
+  <!-- Auth overlay -->
+  <div class="auth-ov hidden" id="authOv">
+    <div class="auth-box">
+      <div id="aStep1">
+        <div class="auth-brand">FIT<b>TRACK</b></div>
+        <div class="auth-sub">Tu progreso,<br>siempre con vos</div>
+        <label class="auth-lbl">Tu email</label>
+        <input class="auth-inp" id="aEmail" type="email" inputmode="email" placeholder="nombre@email.com" onkeydown="if(event.key==='Enter')sendOtp()">
+        <button class="auth-btn" id="aSendBtn" onclick="sendOtp()">Continuar →</button>
+        <div class="auth-err" id="aErr1"></div>
+      </div>
+      <div id="aStep2" style="display:none">
+        <div class="auth-brand">FIT<b>TRACK</b></div>
+        <div class="auth-sub" id="aOtpSub">Revisá tu email</div>
+        <label class="auth-lbl">Código de 6 dígitos</label>
+        <input class="auth-inp otp" id="aOtp" type="text" inputmode="numeric" placeholder="······" maxlength="6"
+          onkeydown="if(event.key==='Enter')verifyOtp()"
+          oninput="if(this.value.replace(/\D/g,'').length===6){this.value=this.value.replace(/\D/g,'');verifyOtp()}">
+        <button class="auth-btn" id="aVerifyBtn" onclick="verifyOtp()">Ingresar</button>
+        <button class="auth-back" onclick="backToEmail()">← Cambiar email</button>
+        <div class="auth-err" id="aErr2"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- NAV -->
   <nav class="nav">
@@ -355,13 +404,97 @@ let state = {
   curEx: null,
 };
 
-/* ===================== STORAGE ===================== */
-async function load(){
-  try{ const s = localStorage.getItem('ft_sessions'); if(s) state.sessions = JSON.parse(s); }catch(e){}
-  try{ const c = localStorage.getItem('ft_custom');   if(c) state.custom   = JSON.parse(c); }catch(e){}
+/* ===================== SUPABASE + AUTH ===================== */
+let _sb = null;
+let _otpEmail = '';
+
+function initSb(){
+  _sb = supabase.createClient('https://efyewcrcsuhmvdjldmsn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmeWV3Y3Jjc3VobXZkamxkbXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NjE0NzYsImV4cCI6MjA5ODMzNzQ3Nn0.yfvcmQmoPjfC06hAltEzMUNgbbtw29kLgZEWbd8dmwY');
 }
-async function saveSessions(){ try{ localStorage.setItem('ft_sessions', JSON.stringify(state.sessions)); }catch(e){ toast('No se pudo guardar'); } }
-async function saveCustomStore(){ try{ localStorage.setItem('ft_custom', JSON.stringify(state.custom)); }catch(e){} }
+
+async function initAuth(){
+  initSb();
+  _sb.auth.onAuthStateChange(async (ev, sess) => {
+    if(sess) await onSignedIn(sess.user);
+    else onSignedOut();
+  });
+  const { data: { session } } = await _sb.auth.getSession();
+  if(session) await onSignedIn(session.user);
+  else showAuth();
+}
+
+async function onSignedIn(user){
+  hideAuth();
+  const email = user.email || '';
+  document.getElementById('uChip').style.display = 'flex';
+  document.getElementById('uAv').textContent = email[0].toUpperCase();
+  document.getElementById('uEm').textContent = email;
+  await load();
+  renderLog();
+}
+
+function onSignedOut(){
+  state.sessions=[]; state.custom=[]; state.curEx=null; state.draftSets=[];
+  document.getElementById('uChip').style.display='none';
+  showAuth();
+}
+
+function showAuth(){ document.getElementById('authOv').classList.remove('hidden'); }
+function hideAuth(){ document.getElementById('authOv').classList.add('hidden'); }
+
+async function sendOtp(){
+  const email = document.getElementById('aEmail').value.trim();
+  const err = document.getElementById('aErr1');
+  if(!email||!email.includes('@')){ err.textContent='Ingresá un email válido'; return; }
+  const btn = document.getElementById('aSendBtn');
+  btn.disabled=true; btn.textContent='Enviando…'; err.textContent='';
+  const { error } = await _sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:true } });
+  btn.disabled=false; btn.textContent='Continuar →';
+  if(error){ err.textContent='No se pudo enviar. Revisá el email.'; return; }
+  _otpEmail = email;
+  document.getElementById('aOtpSub').textContent = `Código enviado a ${email}`;
+  document.getElementById('aStep1').style.display='none';
+  document.getElementById('aStep2').style.display='block';
+  setTimeout(()=>document.getElementById('aOtp').focus(), 100);
+}
+
+async function verifyOtp(){
+  const token = document.getElementById('aOtp').value.replace(/\D/g,'');
+  const err = document.getElementById('aErr2');
+  if(token.length!==6){ err.textContent='El código tiene 6 dígitos'; return; }
+  const btn = document.getElementById('aVerifyBtn');
+  btn.disabled=true; btn.textContent='Verificando…'; err.textContent='';
+  const { error } = await _sb.auth.verifyOtp({ email:_otpEmail, token, type:'email' });
+  btn.disabled=false; btn.textContent='Ingresar';
+  if(error){ err.textContent='Código incorrecto o expirado.'; document.getElementById('aOtp').value=''; return; }
+}
+
+function backToEmail(){
+  document.getElementById('aStep2').style.display='none';
+  document.getElementById('aStep1').style.display='block';
+  document.getElementById('aErr2').textContent='';
+  document.getElementById('aOtp').value='';
+}
+
+async function signOut(){
+  if(!confirm('¿Cerrar sesión?')) return;
+  await _sb.auth.signOut();
+}
+
+/* ===================== STORAGE (Supabase) ===================== */
+async function load(){
+  if(!_sb) return;
+  try{
+    const { data:sess } = await _sb.from('workout_sessions').select('*').order('date',{ascending:false}).order('created_at',{ascending:false});
+    state.sessions = (sess||[]).map(s=>({id:s.id,date:s.date,exId:s.ex_id,exName:s.ex_name,musc:s.musc,t:s.t,sets:s.sets,notes:s.notes||''}));
+  }catch(e){console.error('sessions load',e);}
+  try{
+    const { data:cust } = await _sb.from('exercises_custom').select('*').order('created_at',{ascending:true});
+    state.custom = (cust||[]).map(e=>({id:e.id,name:e.name,musc:e.musc,t:e.t}));
+  }catch(e){console.error('custom load',e);}
+}
+async function saveSessions(){} // no-op: handled per operation
+async function saveCustomStore(){} // no-op: handled per operation
 
 function allExercises(){ return [...PREDEF, ...state.custom]; }
 function todayStr(){ return new Date().toISOString().slice(0,10); }
@@ -478,13 +611,14 @@ function delDraft(i){ state.draftSets.splice(i,1); renderDraft(); }
 
 async function finishExercise(){
   const ex = state.curEx; if(!ex||!state.draftSets.length) return;
-  const entry = {
-    id:'s'+Date.now(), date:todayStr(), exId:ex.id, exName:ex.name, musc:ex.musc, t:ex.t,
-    sets: state.draftSets.slice(),
-    notes: document.getElementById('inNotes').value.trim()
-  };
-  state.sessions.unshift(entry);
-  await saveSessions();
+  const notes = document.getElementById('inNotes').value.trim();
+  const sets  = state.draftSets.slice();
+  const date  = todayStr();
+  const {data, error} = await _sb.from('workout_sessions').insert({
+    ex_id:ex.id, ex_name:ex.name, musc:ex.musc, t:ex.t, sets, notes, date
+  }).select().single();
+  if(error){ toast('Error al guardar'); console.error(error); return; }
+  state.sessions.unshift({id:data.id, date, exId:ex.id, exName:ex.name, musc:ex.musc, t:ex.t, sets, notes});
   state.draftSets=[]; document.getElementById('inNotes').value='';
   renderLog();
   toast('Guardado ✓');
@@ -542,8 +676,9 @@ async function saveCustom(){
   if(!name){ toast('Ponele un nombre'); return; }
   const musc=document.getElementById('cMusc').value;
   const t=document.querySelector('#cType button.on').dataset.t;
-  state.custom.push({id:'c'+Date.now(),name,musc,t});
-  await saveCustomStore();
+  const {data, error} = await _sb.from('exercises_custom').insert({name, musc, t}).select().single();
+  if(error){ toast('Error al crear ejercicio'); return; }
+  state.custom.push({id:data.id, name, musc, t});
   closeSheet(); renderLib(); toast('Ejercicio creado ✓');
 }
 
@@ -719,8 +854,9 @@ function confirmDel(id){
 }
 
 async function deleteSession(id){
+  const {error} = await _sb.from('workout_sessions').delete().eq('id', id);
+  if(error){ toast('Error al eliminar'); return; }
   state.sessions = state.sessions.filter(s=>s.id!==id);
-  await saveSessions();
   renderHist();
   toast('Registro eliminado');
 }
@@ -775,12 +911,13 @@ async function saveEdit(){
   if(idx===-1) return;
   const validSets = editSets.filter(s=>s.reps>0);
   if(!validSets.length){ toast('Necesitás al menos 1 serie válida'); return; }
+  const notes = document.getElementById('editNotes').value.trim();
+  const {error} = await _sb.from('workout_sessions').update({sets:validSets, notes}).eq('id', editId);
+  if(error){ toast('Error al guardar'); return; }
   state.sessions[idx].sets = validSets;
-  state.sessions[idx].notes = document.getElementById('editNotes').value.trim();
-  await saveSessions();
+  state.sessions[idx].notes = notes;
   closeSheet();
   renderHist();
-  // refrescar log si el ejercicio editado es el activo
   if(state.curEx && state.curEx.id===state.sessions[idx].exId) renderLog();
   toast('Cambios guardados ✓');
 }
@@ -788,8 +925,7 @@ async function saveEdit(){
 /* ===================== INIT ===================== */
 (async function init(){
   document.getElementById('todayLabel').textContent = new Date().toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'});
-  await load();
-  renderLog();
+  await initAuth();
 })();
 </script>
 </body>
