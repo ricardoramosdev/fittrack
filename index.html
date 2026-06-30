@@ -20,7 +20,7 @@
   --good:#39d98a;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0}
+html,body{margin:0;padding:0;height:100%;background:var(--ink)}
 body{
   font-family:'Inter',system-ui,sans-serif;
   background:var(--ink);
@@ -593,9 +593,9 @@ function renderProgList(){
   renderProg();
 }
 function fmtMetric(val, reps, t){
-  if(t==='dificultad') return val+'/10';
+  if(t==='dificultad') return val+'/10 ×'+reps;
   if(t==='corporal') return val>0 ? val+'kg+'+reps : reps+' reps';
-  return val+'kg';
+  return val+'kg×'+reps;
 }
 function fmtDateShort(d){
   const dt=new Date(d+'T00:00:00');
@@ -618,9 +618,9 @@ function renderProg(){
   // Último peso (sesión más reciente)
   const lastS=series[series.length-1];
   const lastText = fmtMetric(lastS.metric, lastS.reps, ex.t);
-  const prText = ex.t==='dificultad'? pr.weight+'<small>/10</small>'
+  const prText = ex.t==='dificultad'? pr.weight+'<small>/10 ×</small>'+pr.reps
     : ex.t==='corporal'? (pr.weight>0? pr.weight+'<small>kg +</small>'+pr.reps+'<small>reps</small>':pr.reps+'<small> reps</small>')
-    : pr.weight+'<small>kg</small>';
+    : pr.weight+'<small>kg ×</small> '+pr.reps+'<small> reps</small>';
 
   const metricLabel = ex.t==='dificultad'?'Dificultad':ex.t==='corporal'?'Lastre / reps':'Peso (kg)';
   const metricPts = series.map(p=>({val:p.metric, label:fmtMetric(p.metric,p.reps,ex.t), date:fmtDateShort(p.date)}));
