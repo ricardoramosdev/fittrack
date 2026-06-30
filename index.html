@@ -93,7 +93,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .notes::placeholder{color:var(--mute-2)}
 
 /* ---- Exercise picker / library ---- */
-.search{width:100%;background:var(--ink-2);border:1px solid var(--line);border-radius:13px;color:var(--chalk);padding:13px 15px;font-size:15px;outline:none;font-family:inherit}
+.search{width:100%;background:var(--ink-2);border:1px solid var(--line);border-radius:13px;color:var(--chalk);padding:13px 15px;font-size:16px;outline:none;font-family:inherit}
 .search::placeholder{color:var(--mute-2)}
 .chips{display:flex;gap:8px;overflow-x:auto;padding:12px 0 4px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
@@ -153,18 +153,21 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .sheet-bg.on{opacity:1;pointer-events:auto}
 .sheet{position:fixed;left:50%;transform:translateX(-50%) translateY(100%);bottom:0;width:100%;max-width:520px;
   background:var(--ink-2);border-top:1px solid var(--line);border-radius:22px 22px 0 0;padding:18px 18px calc(22px + env(safe-area-inset-bottom));
-  transition:transform .3s cubic-bezier(.2,.8,.2,1);z-index:41;max-height:88dvh;overflow-y:auto}
+  transition:transform .3s cubic-bezier(.2,.8,.2,1);z-index:41;max-height:88svh;overflow-y:auto;overscroll-behavior:contain}
 .sheet.on{transform:translateX(-50%) translateY(0)}
 .sheet .grab{width:38px;height:4px;background:var(--line);border-radius:3px;margin:0 auto 16px}
 .sheet h3{font-family:'Bebas Neue';font-size:24px;letter-spacing:1px;margin:0 0 4px}
 .sheet .field{margin-top:14px}
 .sheet .field label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mute);font-weight:600;display:block;margin-bottom:6px}
-.sheet input,.sheet select{width:100%;background:var(--ink);border:1px solid var(--line);border-radius:12px;color:var(--chalk);padding:13px 14px;font-size:15px;outline:none;font-family:inherit;-webkit-appearance:none;appearance:none}
+.sheet input,.sheet select{width:100%;background:var(--ink);border:1px solid var(--line);border-radius:12px;color:var(--chalk);padding:13px 14px;font-size:16px;outline:none;font-family:inherit;-webkit-appearance:none;appearance:none}
 .sheet .save{width:100%;margin-top:18px;background:var(--heat);color:#101010;font-weight:700;font-size:15px;padding:15px;border-radius:14px}
 .toggle{display:flex;gap:8px;margin-top:6px}
 .toggle button{flex:1;background:var(--ink);border:1px solid var(--line);color:var(--mute);font-weight:600;font-size:13px;padding:11px;border-radius:11px}
 .toggle button.on{background:var(--heat);color:#101010;border-color:var(--heat)}
 
+/* Picker: altura fija → la lista scrollea internamente, el sheet no salta */
+#pickSheet{height:88svh;display:flex;flex-direction:column;overflow:hidden}
+#pickList{flex:1;overflow-y:auto;min-height:0}
 .toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink-3);border:1px solid var(--line);color:var(--chalk);
   font-size:13px;font-weight:600;padding:11px 18px;border-radius:30px;opacity:0;transition:.3s;z-index:60;pointer-events:none;white-space:nowrap}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -190,7 +193,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 <div class="app">
   <div class="topbar">
     <div class="brand">FIT<b>TRACK</b></div>
-    <div class="date" id="todayLabel"></div><div class="em" id="uEm"></div></div>
+    <div class="date" id="todayLabel"></div>
   </div>
 
   <!-- LOG -->
@@ -277,7 +280,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   <div class="grab"></div>
   <h3>Elegí un ejercicio</h3>
   <input class="search" id="pickSearch" placeholder="Buscar…" oninput="renderPicker()" style="margin-top:10px">
-  <div class="exlist" id="pickList" style="margin-top:12px"></div>
+  <div class="exlist" id="pickList"></div>
 </div>
 
 <!-- Create sheet -->
