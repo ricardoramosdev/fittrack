@@ -188,6 +188,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 
 
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="app">
@@ -358,17 +359,41 @@ let state = {
   curEx: null,
 };
 
+
+function errStr(e){
+  if(!e) return 'error desconocido';
+  try{
+    const parts=[];
+    if(e.message) parts.push(e.message);
+    if(e.code) parts.push('code:'+e.code);
+    if(e.details) parts.push('details:'+e.details);
+    if(e.hint) parts.push('hint:'+e.hint);
+    if(parts.length) return parts.join(' | ');
+    return JSON.stringify(e);
+  }catch(_){ return String(e); }
+}
+
+/* ===================== SUPABASE (sin auth todavía — etapa de prueba) ===================== */
+const _sb = supabase.createClient('https://efyewcrcsuhmvdjldmsn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmeWV3Y3Jjc3VobXZkamxkbXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NjE0NzYsImV4cCI6MjA5ODMzNzQ3Nn0.yfvcmQmoPjfC06hAltEzMUNgbbtw29kLgZEWbd8dmwY', {
+  auth: { persistSession:false, autoRefreshToken:false, detectSessionInUrl:false }
+});
+
 /* ===================== STORAGE ===================== */
 async function load(){
-  try{ const s=localStorage.getItem('ft_sessions'); if(s) state.sessions=JSON.parse(s); }catch(e){}
-  try{ const s=localStorage.getItem('ft_custom');   if(s) state.custom=JSON.parse(s);   }catch(e){}
+  try{
+    const {data, error} = await _sb.from('workout_sessions').select('*')
+      .order('date',{ascending:false}).order('created_at',{ascending:false});
+    if(error){ console.error('load sessions', JSON.stringify(error)); toast('Error: '+errStr(error)); }
+    state.sessions = (data||[]).map(s=>({id:s.id, date:s.date, exId:s.ex_id, exName:s.ex_name, musc:s.musc, t:s.t, sets:s.sets, notes:s.notes||''}));
+  }catch(e){ console.error('load sessions exception', e); }
+  try{
+    const {data, error} = await _sb.from('exercises_custom').select('*').order('created_at',{ascending:true});
+    if(error){ console.error('load custom', JSON.stringify(error)); }
+    state.custom = (data||[]).map(e=>({id:e.id, name:e.name, musc:e.musc, t:e.t}));
+  }catch(e){ console.error('load custom exception', e); }
 }
-async function saveSessions(){
-  try{ localStorage.setItem('ft_sessions', JSON.stringify(state.sessions)); }catch(e){ toast('No se pudo guardar'); }
-}
-async function saveCustomStore(){
-  try{ localStorage.setItem('ft_custom', JSON.stringify(state.custom)); }catch(e){}
-}
+async function saveSessions(){}     // no-op: cada operación CRUD escribe directo en Supabase
+async function saveCustomStore(){}  // no-op: ídem
 
 function allExercises(){ return [...PREDEF, ...state.custom]; }
 function todayStr(){ return new Date().toISOString().slice(0,10); }
@@ -485,13 +510,14 @@ function delDraft(i){ state.draftSets.splice(i,1); renderDraft(); }
 
 async function finishExercise(){
   const ex = state.curEx; if(!ex||!state.draftSets.length) return;
-  const entry = {
-    id:'s'+Date.now(), date:todayStr(), exId:ex.id, exName:ex.name, musc:ex.musc, t:ex.t,
-    sets: state.draftSets.slice(),
-    notes: document.getElementById('inNotes').value.trim()
-  };
-  state.sessions.unshift(entry);
-  await saveSessions();
+  const notes = document.getElementById('inNotes').value.trim();
+  const sets  = state.draftSets.slice();
+  const date  = todayStr();
+  const {data, error} = await _sb.from('workout_sessions').insert({
+    ex_id:ex.id, ex_name:ex.name, musc:ex.musc, t:ex.t, sets, notes, date
+  }).select().single();
+  if(error){ toast('Error: '+errStr(error)); console.error('insert session', JSON.stringify(error)); return; }
+  state.sessions.unshift({id:data.id, date, exId:ex.id, exName:ex.name, musc:ex.musc, t:ex.t, sets, notes});
   state.draftSets=[]; document.getElementById('inNotes').value='';
   renderLog();
   toast('Guardado ✓');
@@ -549,8 +575,9 @@ async function saveCustom(){
   if(!name){ toast('Ponele un nombre'); return; }
   const musc=document.getElementById('cMusc').value;
   const t=document.querySelector('#cType button.on').dataset.t;
-  state.custom.push({id:'c'+Date.now(), name, musc, t});
-  await saveCustomStore();
+  const {data, error} = await _sb.from('exercises_custom').insert({name, musc, t}).select().single();
+  if(error){ toast('Error: '+errStr(error)); console.error('insert custom', JSON.stringify(error)); return; }
+  state.custom.push({id:data.id, name, musc, t});
   closeSheet(); renderLib(); toast('Ejercicio creado ✓');
 }
 
@@ -726,8 +753,9 @@ function confirmDel(id){
 }
 
 async function deleteSession(id){
+  const {error} = await _sb.from('workout_sessions').delete().eq('id', id);
+  if(error){ toast('Error: '+errStr(error)); console.error('delete session', JSON.stringify(error)); return; }
   state.sessions = state.sessions.filter(s=>s.id!==id);
-  await saveSessions();
   renderHist();
   toast('Registro eliminado');
 }
@@ -783,9 +811,10 @@ async function saveEdit(){
   const validSets = editSets.filter(s=>s.reps>0);
   if(!validSets.length){ toast('Necesitás al menos 1 serie válida'); return; }
   const notes = document.getElementById('editNotes').value.trim();
+  const {error} = await _sb.from('workout_sessions').update({sets:validSets, notes}).eq('id', editId);
+  if(error){ toast('Error: '+errStr(error)); console.error('update session', JSON.stringify(error)); return; }
   state.sessions[idx].sets = validSets;
   state.sessions[idx].notes = notes;
-  await saveSessions();
   closeSheet();
   renderHist();
   if(state.curEx && state.curEx.id===state.sessions[idx].exId) renderLog();
