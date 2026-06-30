@@ -324,33 +324,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 const MUSCLES = ["Pecho","Espalda","Hombros","Bíceps","Tríceps","Core","Cuádriceps","Femoral","Glúteos","Pantorrilla"];
 const ICON = {Pecho:"🫁",Espalda:"🔙",Hombros:"🏔️",Bíceps:"💪",Tríceps:"🦾",Core:"🎯",Cuádriceps:"🦵",Femoral:"🦿",Glúteos:"🍑",Pantorrilla:"👟"};
 
-// Ejercicios predefinidos: t = "peso" | "corporal" | "dificultad"
-const PREDEF = [
-  {id:"p1",name:"Press de banca",musc:"Pecho",t:"peso"},
-  {id:"p2",name:"Press inclinado con mancuernas",musc:"Pecho",t:"peso"},
-  {id:"p3",name:"Aperturas en polea",musc:"Pecho",t:"peso"},
-  {id:"p4",name:"Flexiones de brazos",musc:"Pecho",t:"corporal"},
-  {id:"p5",name:"Dominadas",musc:"Espalda",t:"corporal"},
-  {id:"p6",name:"Remo con barra",musc:"Espalda",t:"peso"},
-  {id:"p7",name:"Jalón al pecho",musc:"Espalda",t:"peso"},
-  {id:"p8",name:"Peso muerto",musc:"Espalda",t:"peso"},
-  {id:"p9",name:"Press militar",musc:"Hombros",t:"peso"},
-  {id:"p10",name:"Elevaciones laterales",musc:"Hombros",t:"peso"},
-  {id:"p11",name:"Curl con barra",musc:"Bíceps",t:"peso"},
-  {id:"p12",name:"Curl martillo",musc:"Bíceps",t:"peso"},
-  {id:"p13",name:"Fondos en paralelas",musc:"Tríceps",t:"corporal"},
-  {id:"p14",name:"Extensión de tríceps en polea",musc:"Tríceps",t:"peso"},
-  {id:"p15",name:"Plancha",musc:"Core",t:"dificultad"},
-  {id:"p16",name:"Crunch abdominal",musc:"Core",t:"corporal"},
-  {id:"p17",name:"Sentadilla con barra",musc:"Cuádriceps",t:"peso"},
-  {id:"p18",name:"Prensa de piernas",musc:"Cuádriceps",t:"peso"},
-  {id:"p19",name:"Zancadas",musc:"Cuádriceps",t:"peso"},
-  {id:"p20",name:"Curl femoral",musc:"Femoral",t:"peso"},
-  {id:"p21",name:"Peso muerto rumano",musc:"Femoral",t:"peso"},
-  {id:"p22",name:"Hip thrust",musc:"Glúteos",t:"peso"},
-  {id:"p23",name:"Patada de glúteo en polea",musc:"Glúteos",t:"peso"},
-  {id:"p24",name:"Elevación de talones",musc:"Pantorrilla",t:"peso"},
-];
+// Ejercicios predefinidos: ahora viven en Supabase (tabla exercises_predef), se cargan en load()
+let PREDEF = [];
 
 let state = {
   sessions: [],     // {id, date(YYYY-MM-DD), exId, exName, musc, t, sets:[{reps,weight,diff}], notes}
@@ -380,6 +355,11 @@ const _sb = supabase.createClient('https://efyewcrcsuhmvdjldmsn.supabase.co', 'e
 
 /* ===================== STORAGE ===================== */
 async function load(){
+  try{
+    const {data, error} = await _sb.from('exercises_predef').select('*').order('id',{ascending:true});
+    if(error){ console.error('load predef', JSON.stringify(error)); toast('Error: '+errStr(error)); }
+    PREDEF = data || [];
+  }catch(e){ console.error('load predef exception', e); }
   try{
     const {data, error} = await _sb.from('workout_sessions').select('*')
       .order('date',{ascending:false}).order('created_at',{ascending:false});
