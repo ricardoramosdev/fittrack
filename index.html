@@ -183,35 +183,14 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .erow .edel{color:#e74c3c;font-size:20px;padding:4px;margin-left:auto;flex-shrink:0}
 .eadd{width:100%;background:var(--ink-3);border:1px solid var(--line);color:var(--mute);font-weight:600;font-size:13px;padding:11px;border-radius:11px;margin-bottom:12px}
 
-/* ── Auth overlay ── */
-.auth-ov{position:fixed;inset:0;background:var(--ink);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px}
-.auth-ov.hidden{display:none}
-.auth-box{width:100%;max-width:360px}
-.auth-brand{font-family:'Bebas Neue';font-size:44px;letter-spacing:3px;text-align:center;margin-bottom:6px}
-.auth-brand b{color:var(--heat)}
-.auth-sub{text-align:center;color:var(--mute);font-size:14px;margin-bottom:38px;line-height:1.5}
-.auth-lbl{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mute);font-weight:600;margin-bottom:8px;display:block}
-.auth-inp{width:100%;background:var(--ink-2);border:1px solid var(--line);border-radius:14px;color:var(--chalk);padding:16px;font-size:17px;outline:none;font-family:inherit;margin-bottom:14px;transition:border-color .2s}
-.auth-inp:focus{border-color:var(--heat)}
-.auth-inp.otp{letter-spacing:10px;font-family:'JetBrains Mono';font-size:26px;text-align:center}
-.auth-btn{width:100%;background:var(--heat);color:#101010;font-weight:700;font-size:16px;padding:16px;border-radius:14px;border:none;cursor:pointer;font-family:inherit;transition:opacity .15s}
-.auth-btn:disabled{opacity:.45;cursor:default}
-.auth-back{width:100%;background:none;border:none;color:var(--mute);font-size:13px;padding:14px;cursor:pointer;font-family:inherit;margin-top:2px}
-.auth-err{color:#e74c3c;font-size:13px;text-align:center;margin-top:10px;min-height:18px}
-/* user chip */
-.uchip{display:flex;align-items:center;gap:6px;background:var(--ink-2);border:1px solid var(--line);border-radius:20px;padding:5px 11px 5px 7px;cursor:pointer}
-.uchip .av{width:22px;height:22px;border-radius:50%;background:var(--heat);color:#101010;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.uchip .em{font-size:11px;color:var(--mute);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="app">
   <div class="topbar">
     <div class="brand">FIT<b>TRACK</b></div>
-    <div class="date" id="todayLabel"></div>
-    <div class="uchip" id="uChip" style="display:none" onclick="signOut()"><div class="av" id="uAv">?</div><div class="em" id="uEm"></div></div>
+    <div class="date" id="todayLabel"></div><div class="em" id="uEm"></div></div>
   </div>
 
   <!-- LOG -->
@@ -279,15 +258,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     <div class="eyebrow">Progreso</div>
     <select class="progsel" id="progSel" onchange="renderProg()"></select>
     <div id="progBody"></div>
-  </section>
-
-
-  <!-- Auth overlay -->
-  <div class="auth-ov hidden" id="authOv">
-    <div class="auth-box">
-      <div id="aStep1">
-        <div class="auth-brand">FIT<b>TRACK</b></div>
-        <div class="auth-sub">Tu progreso,<br>siempre con vos</div>
+  </section>        <div class="auth-sub">Tu progreso,<br>siempre con vos</div>
         <label class="auth-lbl">Email</label>
         <input class="auth-inp" id="aEmail" type="email" inputmode="email" placeholder="nombre@email.com"
           onkeydown="if(event.key==='Enter')doSignIn()">
@@ -302,17 +273,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       </div>
     </div>
   </div>
-
-
-  <!-- DIAG (solo para desarrollo) -->
-  <section class="screen" id="screen-diag" style="padding-bottom:120px">
-    <div class="eyebrow">Diagnóstico</div>
-    <div style="background:var(--ink-2);border:1px solid var(--line);border-radius:13px;padding:16px">
-      <button class="addset" onclick="adminSetup()" style="margin-bottom:12px">🔧 Verificar y reparar tablas</button>
-      <pre id="diagLog" style="font-family:'JetBrains Mono';font-size:11px;color:var(--mute);white-space:pre-wrap;margin:0;line-height:1.6">Presioná el botón para diagnosticar...</pre>
-    </div>
-  </section>
-
   <!-- NAV -->
   <nav class="nav">
     <button class="on" data-s="log" onclick="go('log')">
@@ -322,11 +282,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     <button data-s="hist" onclick="go('hist')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Historial</button>
     <button data-s="prog" onclick="go('prog')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5M4 19h16M8 16l4-5 3 3 4-6"/></svg>Progreso</button>
-    <button data-s="diag" onclick="go('diag')" title="Diagnóstico">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 6v4m0 4h.01"/></svg>
-      Diag</button>
-</nav>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5M4 19h16M8 16l4-5 3 3 4-6"/></svg>Progreso</button></nav>
 </div>
 
 <!-- Picker sheet -->
@@ -413,98 +369,17 @@ let state = {
   curEx: null,
 };
 
-/* ===================== SUPABASE + AUTH ===================== */
-let _sb = null;
-let _userId = null;
-let _otpEmail = '';
-
-function initSb(){
-  _sb = supabase.createClient('https://efyewcrcsuhmvdjldmsn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmeWV3Y3Jjc3VobXZkamxkbXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NjE0NzYsImV4cCI6MjA5ODMzNzQ3Nn0.yfvcmQmoPjfC06hAltEzMUNgbbtw29kLgZEWbd8dmwY');
-}
-
-async function initAuth(){
-  initSb();
-  _sb.auth.onAuthStateChange(async (ev, sess) => {
-    if(sess) await onSignedIn(sess.user);
-    else onSignedOut();
-  });
-  const { data: { session } } = await _sb.auth.getSession();
-  if(session) await onSignedIn(session.user);
-  else showAuth();
-}
-
-async function onSignedIn(user){
-  _userId = user.id;
-  hideAuth();
-  const email = user.email || '';
-  document.getElementById('uChip').style.display = 'flex';
-  document.getElementById('uAv').textContent = email[0].toUpperCase();
-  document.getElementById('uEm').textContent = email;
-  await load();
-  renderLog();
-}
-
-function onSignedOut(){
-  _userId = null;
-  state.sessions=[]; state.custom=[]; state.curEx=null; state.draftSets=[];
-  document.getElementById('uChip').style.display='none';
-  showAuth();
-}
-
-function showAuth(){ document.getElementById('authOv').classList.remove('hidden'); }
-function hideAuth(){ document.getElementById('authOv').classList.add('hidden'); }
-
-async function doSignIn(){
-  const email = document.getElementById('aEmail').value.trim();
-  const pass  = document.getElementById('aPass').value;
-  const err   = document.getElementById('aErr1');
-  err.textContent=''; err.style.color='#e74c3c';
-  if(!email||!pass){ err.textContent='Completá email y contraseña'; return; }
-  const btn = document.getElementById('aSignInBtn');
-  btn.disabled=true; btn.textContent='Ingresando…';
-  const { error } = await _sb.auth.signInWithPassword({ email, password:pass });
-  btn.disabled=false; btn.textContent='Ingresar';
-  if(error){
-    if(error.message?.includes('Invalid login')) err.textContent='Email o contraseña incorrectos';
-    else err.textContent = error.message||'No se pudo ingresar';
-  }
-}
-
-async function doSignUp(){
-  const email = document.getElementById('aEmail').value.trim();
-  const pass  = document.getElementById('aPass').value;
-  const err   = document.getElementById('aErr1');
-  err.textContent=''; err.style.color='#e74c3c';
-  if(!email||!pass){ err.textContent='Completá email y contraseña'; return; }
-  if(pass.length<6){ err.textContent='La contraseña necesita al menos 6 caracteres'; return; }
-  const btn = document.getElementById('aSignUpBtn');
-  btn.disabled=true; btn.textContent='Creando…';
-  const { error } = await _sb.auth.signUp({ email, password:pass });
-  btn.disabled=false; btn.textContent='Crear cuenta';
-  if(error){ err.textContent = error.message||'No se pudo crear la cuenta'; return; }
-  err.style.color='var(--good)';
-  err.textContent='¡Cuenta creada! Ingresando…';
-}
-
-async function signOut(){
-  if(!confirm('¿Cerrar sesión?')) return;
-  await _sb.auth.signOut();
-}
-
-/* ===================== STORAGE (Supabase) ===================== */
+/* ===================== STORAGE ===================== */
 async function load(){
-  if(!_sb) return;
-  try{
-    const { data:sess } = await _sb.from('workout_sessions').select('*').order('date',{ascending:false}).order('created_at',{ascending:false});
-    state.sessions = (sess||[]).map(s=>({id:s.id,date:s.date,exId:s.ex_id,exName:s.ex_name,musc:s.musc,t:s.t,sets:s.sets,notes:s.notes||''}));
-  }catch(e){console.error('sessions load',e);}
-  try{
-    const { data:cust } = await _sb.from('exercises_custom').select('*').order('created_at',{ascending:true});
-    state.custom = (cust||[]).map(e=>({id:e.id,name:e.name,musc:e.musc,t:e.t}));
-  }catch(e){console.error('custom load',e);}
+  try{ const s=localStorage.getItem('ft_sessions'); if(s) state.sessions=JSON.parse(s); }catch(e){}
+  try{ const s=localStorage.getItem('ft_custom');   if(s) state.custom=JSON.parse(s);   }catch(e){}
 }
-async function saveSessions(){} // no-op: handled per operation
-async function saveCustomStore(){} // no-op: handled per operation
+async function saveSessions(){
+  try{ localStorage.setItem('ft_sessions', JSON.stringify(state.sessions)); }catch(e){ toast('No se pudo guardar'); }
+}
+async function saveCustomStore(){
+  try{ localStorage.setItem('ft_custom', JSON.stringify(state.custom)); }catch(e){}
+}
 
 function allExercises(){ return [...PREDEF, ...state.custom]; }
 function todayStr(){ return new Date().toISOString().slice(0,10); }
@@ -621,15 +496,13 @@ function delDraft(i){ state.draftSets.splice(i,1); renderDraft(); }
 
 async function finishExercise(){
   const ex = state.curEx; if(!ex||!state.draftSets.length) return;
-  const notes = document.getElementById('inNotes').value.trim();
-  const sets  = state.draftSets.slice();
-  const date  = todayStr();
-  if(!_userId){ toast('Sesión expirada, ingresá de nuevo'); return; }
-  const {data, error} = await _sb.from('workout_sessions').insert({
-    user_id:_userId, ex_id:ex.id, ex_name:ex.name, musc:ex.musc, t:ex.t, sets, notes, date
-  }).select().single();
-  if(error){ toast('Error: '+error.message); console.error('SUPA ERROR',JSON.stringify(error)); return; }
-  state.sessions.unshift({id:data.id, date, exId:ex.id, exName:ex.name, musc:ex.musc, t:ex.t, sets, notes});
+  const entry = {
+    id:'s'+Date.now(), date:todayStr(), exId:ex.id, exName:ex.name, musc:ex.musc, t:ex.t,
+    sets: state.draftSets.slice(),
+    notes: document.getElementById('inNotes').value.trim()
+  };
+  state.sessions.unshift(entry);
+  await saveSessions();
   state.draftSets=[]; document.getElementById('inNotes').value='';
   renderLog();
   toast('Guardado ✓');
@@ -687,10 +560,8 @@ async function saveCustom(){
   if(!name){ toast('Ponele un nombre'); return; }
   const musc=document.getElementById('cMusc').value;
   const t=document.querySelector('#cType button.on').dataset.t;
-  if(!_userId){ toast('Sesión expirada, ingresá de nuevo'); return; }
-  const {data, error} = await _sb.from('exercises_custom').insert({user_id:_userId, name, musc, t}).select().single();
-  if(error){ toast('Error: '+error.message); return; }
-  state.custom.push({id:data.id, name, musc, t});
+  state.custom.push({id:'c'+Date.now(), name, musc, t});
+  await saveCustomStore();
   closeSheet(); renderLib(); toast('Ejercicio creado ✓');
 }
 
@@ -866,9 +737,8 @@ function confirmDel(id){
 }
 
 async function deleteSession(id){
-  const {error} = await _sb.from('workout_sessions').delete().eq('id', id);
-  if(error){ toast('Error: '+error.message); return; }
   state.sessions = state.sessions.filter(s=>s.id!==id);
+  await saveSessions();
   renderHist();
   toast('Registro eliminado');
 }
@@ -924,10 +794,9 @@ async function saveEdit(){
   const validSets = editSets.filter(s=>s.reps>0);
   if(!validSets.length){ toast('Necesitás al menos 1 serie válida'); return; }
   const notes = document.getElementById('editNotes').value.trim();
-  const {error} = await _sb.from('workout_sessions').update({sets:validSets, notes}).eq('id', editId);
-  if(error){ toast('Error: '+error.message); return; }
   state.sessions[idx].sets = validSets;
   state.sessions[idx].notes = notes;
+  await saveSessions();
   closeSheet();
   renderHist();
   if(state.curEx && state.curEx.id===state.sessions[idx].exId) renderLog();
@@ -935,114 +804,11 @@ async function saveEdit(){
 }
 
 
-/* ===================== ADMIN (service role, solo diagnóstico) ===================== */
-const _SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmeWV3Y3Jjc3VobXZkamxkbXNuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Mjc2MTQ3NiwiZXhwIjoyMDk4MzM3NDc2fQ.uU94sa53JVR4pQvO_EgDgpOyilqkLZT1htGNfr0N4M0';
-async function runSQL(sql){
-  const res = await fetch('https://efyewcrcsuhmvdjldmsn.supabase.co/rest/v1/rpc/exec_sql', {
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+_SERVICE_KEY,'apikey':_SERVICE_KEY},
-    body: JSON.stringify({query: sql})
-  });
-  return res;
-}
-
-async function adminSetup(){
-  const log = document.getElementById('diagLog');
-  log.textContent = 'Ejecutando...';
-
-  // Usar el endpoint de query directo de Supabase
-  const sql = `
-    -- Recrear tablas con estructura correcta
-    drop table if exists workout_sessions cascade;
-    drop table if exists exercises_custom cascade;
-
-    create table workout_sessions (
-      id uuid default gen_random_uuid() primary key,
-      user_id uuid references auth.users(id) on delete cascade not null,
-      ex_id text not null,
-      ex_name text not null,
-      musc text not null,
-      t text not null,
-      sets jsonb not null default '[]'::jsonb,
-      notes text default '',
-      date date not null default current_date,
-      created_at timestamptz default now()
-    );
-
-    create table exercises_custom (
-      id uuid default gen_random_uuid() primary key,
-      user_id uuid references auth.users(id) on delete cascade not null,
-      name text not null,
-      musc text not null,
-      t text not null,
-      created_at timestamptz default now()
-    );
-
-    alter table workout_sessions enable row level security;
-    alter table exercises_custom enable row level security;
-
-    drop policy if exists "own sessions" on workout_sessions;
-    drop policy if exists "own exercises" on exercises_custom;
-
-    create policy "own sessions" on workout_sessions
-      for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-
-    create policy "own exercises" on exercises_custom
-      for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-  `;
-
-  try {
-    // Probar insert directo para detectar el error real
-    const { data:{user} } = await _sb.auth.getUser();
-    log.textContent += '\nUsuario: ' + (user?.id || 'NO AUTH');
-
-    // Test insert con service role bypass
-    const testRes = await fetch('https://efyewcrcsuhmvdjldmsn.supabase.co/rest/v1/workout_sessions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmeWV3Y3Jjc3VobXZkamxkbXNuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Mjc2MTQ3NiwiZXhwIjoyMDk4MzM3NDc2fQ.uU94sa53JVR4pQvO_EgDgpOyilqkLZT1htGNfr0N4M0',
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmeWV3Y3Jjc3VobXZkamxkbXNuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Mjc2MTQ3NiwiZXhwIjoyMDk4MzM3NDc2fQ.uU94sa53JVR4pQvO_EgDgpOyilqkLZT1htGNfr0N4M0',
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify({
-        user_id: user?.id || '00000000-0000-0000-0000-000000000000',
-        ex_id: 'test', ex_name: 'Test', musc: 'Test', t: 'peso',
-        sets: JSON.stringify([{reps:5,weight:10}]),
-        notes: '', date: new Date().toISOString().slice(0,10)
-      })
-    });
-    const testBody = await testRes.text();
-    log.textContent += '\nTest insert status: ' + testRes.status;
-    log.textContent += '\nRespuesta: ' + testBody.slice(0,300);
-
-    if(testRes.status===201) {
-      log.textContent += '\n\n✅ TABLAS OK - el problema es otro';
-      // Limpiar registro de test
-      const parsed = JSON.parse(testBody);
-      const testId = Array.isArray(parsed) ? parsed[0]?.id : parsed?.id;
-      if(testId) {
-        await fetch(`https://efyewcrcsuhmvdjldmsn.supabase.co/rest/v1/workout_sessions?id=eq.${testId}`, {
-          method:'DELETE', headers:{'Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmeWV3Y3Jjc3VobXZkamxkbXNuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Mjc2MTQ3NiwiZXhwIjoyMDk4MzM3NDc2fQ.uU94sa53JVR4pQvO_EgDgpOyilqkLZT1htGNfr0N4M0','apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmeWV3Y3Jjc3VobXZkamxkbXNuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Mjc2MTQ3NiwiZXhwIjoyMDk4MzM3NDc2fQ.uU94sa53JVR4pQvO_EgDgpOyilqkLZT1htGNfr0N4M0'}
-        });
-        log.textContent += '\n(registro de test eliminado)';
-      }
-    } else if(testRes.status===404 || testBody.includes('does not exist')) {
-      log.textContent += '\n\n❌ TABLAS NO EXISTEN - necesitás crear las tablas';
-    } else if(testRes.status===401) {
-      log.textContent += '\n\n❌ ERROR DE AUTH';
-    } else {
-      log.textContent += '\n\nVerificá el error arriba';
-    }
-  } catch(e) {
-    log.textContent += '\nError JS: ' + e.message;
-  }
-}
-
 /* ===================== INIT ===================== */
 (async function init(){
   document.getElementById('todayLabel').textContent = new Date().toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'});
-  await initAuth();
+  await load();
+  renderLog();
 })();
 </script>
 </body>
